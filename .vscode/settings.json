@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "transformer64.h": "c",
+        "stdint.h": "c",
+        "sampler64.h": "c",
+        "compare": "cpp"
+    }
+}

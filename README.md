@@ -1,9 +1,12 @@
 # Llama2 PSP
-Inference Llama 2 in C on Playstation Portable (PSP). Based on inference of ytmytm to Llama 2 for c64.
+Inference Llama 2 in C on Playstation Portable (PSP) BY Caio Madeira.  
+Based on inference of ytmytm to [Llama 2 for c64](https://github.com/ytmytm/llama2.c64).
+
+![Running on PPSSPP](assets/1.png)
 
 ## CHANGELOG
 
-03/08/25 - Funcionando apenas no PPSSPP. Crash no hardware do PSP.  
+03/08/25 - Funcionando apenas no PPSSPP.  
 
 ## Portando funções
 O ponto central da adaptação é: atribuir o acesso ao hardware da REU por acesso aos ponteiros da RAM principal do PSP.

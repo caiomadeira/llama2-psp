@@ -39,7 +39,10 @@ int main(int argc, char* argv[])
     load_tokenizer(&tokenizer);
 
     Transformer transformer;
-    load_transformer(&transformer);
+    if (!load_transformer(&transformer)){
+        sceKernelExitGame();        
+        exit(-1);
+    }
     
     pspDebugScreenPrintf("modelo carregado.!\n\n");
     sceKernelDelayThread(2000000); // 2s

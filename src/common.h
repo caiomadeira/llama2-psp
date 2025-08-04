@@ -19,9 +19,19 @@
 #define SCREEN_HEIGHT 272
 #define BUF_WIDTH	(512)
 
-#define TOKENIZER_BIN_PATH "tokenizer.bin"
-#define WEIGHTS_PSP_PATH "weights.psp"
-#define CONFIG_BIN_PATH "config.bin"
+// #if defined(__PSP__)
+//     #define TOKENIZER_BIN_PATH "tokenizer.bin"
+//     #define WEIGHTS_PSP_PATH "weights.psp"
+//     #define CONFIG_BIN_PATH "config.bin"
+// #else
+//     #define TOKENIZER_BIN_PATH "../resources/tokenizer.bin"
+//     #define WEIGHTS_PSP_PATH "../resources/weights.psp"
+//     #define CONFIG_BIN_PATH "../resources/config.bin"
+// #endif
+
+#define TOKENIZER_BIN_PATH "../resources/tokenizer.bin"
+#define WEIGHTS_PSP_PATH "../resources/weights.psp"
+#define CONFIG_BIN_PATH "../resources/config.bin"
 
 #define print pspDebugScreenPrintf
 //volatile int done = 0;

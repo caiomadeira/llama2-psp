@@ -106,14 +106,15 @@ void memory_map_weights(Transformer* t, char* weights_ptr) {
 
 char* g_weights_memory_block = NULL;
 
-void load_transformer(Transformer* t)
+bool load_transformer(Transformer* t)
 {
     t->config = (Config*)config_bin;
 
-    FILE* file = fopen("build/weights.psp", "rb");
+    FILE* file = fopen(WEIGHTS_PSP_PATH, "rb");
     if (file == NULL) {
-        printf("Error: can't open weights.psp\n");
-        return;
+        pspDebugScreenPrintf("Error: can't open weights.psp\n");
+        sceKernelDelayThread(2000000);
+        return false;
     }
 
     // --- calcular o tamanho do arquivo ---
@@ -124,9 +125,9 @@ void load_transformer(Transformer* t)
 
     g_weights_memory_block = (char*)malloc(file_size);
     if (g_weights_memory_block == NULL) {
-        printf("Error: Can't allocate memory for weights.\n");
+        pspDebugScreenPrintf("Error: Can't allocate memory for weights.\n");
         fclose(file);
-        return;
+        return false;
     }
     fread(g_weights_memory_block, 1, file_size, file);
     fclose(file);
@@ -134,8 +135,8 @@ void load_transformer(Transformer* t)
     // verificando a assinatura posta antes
     uint32_t magic = *(uint32_t*)g_weights_memory_block;
     if (magic != SIGNATURE) {
-        printf("Error: SIGNATURE INVALID in weights.psp\n");
-        return;
+        pspDebugScreenPrintf("Error: SIGNATURE INVALID in weights.psp\n");
+        return false;
     }
 
     // mapeando os weigths com memory_map_weights. O ponteiro começa depois da signature de 4 bytes.
@@ -143,4 +144,5 @@ void load_transformer(Transformer* t)
     memory_map_weights(t, weights_ptr);
 
     malloc_run_state(t); //alocando os buffers de estado (trabalho) de RunState
+    return true;
 }

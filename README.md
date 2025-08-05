@@ -6,7 +6,7 @@ Based on inference of ytmytm to [Llama 2 for c64](https://github.com/ytmytm/llam
 
 ## CHANGELOG
 
-03/08/25 - Funcionando apenas no PPSSPP.  
+03/08/25 - Funcionando apenas no PPSSPP. Using [Tiny Stories 260k model](https://huggingface.co/karpathy/tinyllamas/tree/main/stories260K). 
 
 ## Portando funções
 O ponto central da adaptação é: atribuir o acesso ao hardware da REU por acesso aos ponteiros da RAM principal do PSP.

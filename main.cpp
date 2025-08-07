@@ -6,6 +6,7 @@ PSP port by Caio Madeira
 */
 #include <psprtc.h> // relogio do psp (real-time clock)
 #include <cstdlib> // rand e srand sao daui
+#include <psppower.h>
 
 #include "src/tokenizer.h"
 #include "src/generate.h"
@@ -26,8 +27,15 @@ float temperature = 0.0f;
 float topp = 0.9f;
 uint16_t steps = 256;
 
+void print_mem_info(const char* stage) {
+    pspDebugScreenSetXY(0, pspDebugScreenGetY() + 1); // Pula uma linha
+    pspDebugScreenPrintf("[%s] Memoria Livre: %d KB\n", stage, sceKernelMaxFreeMemSize() / 1024);
+    sceKernelDelayThread(2000000); // Pausa de 2 segundos para podermos ler
+}
+
 int main(int argc, char* argv[])
 {
+    scePowerSetClockFrequency(333, 333, 166);
     SceCtrlData pad;
 	SetupCallbacks();
 	pspDebugScreenInit();
@@ -37,10 +45,12 @@ int main(int argc, char* argv[])
 
     Tokenizer tokenizer;
     load_tokenizer(&tokenizer);
+    print_mem_info("Apos Tokenizer");
 
     Transformer transformer;
     load_transformer(&transformer);
-    
+    print_mem_info("Apos Transformer");
+
     pspDebugScreenPrintf("modelo carregado.!\n\n");
     sceKernelDelayThread(2000000); // 2s
 
@@ -98,6 +108,8 @@ int main(int argc, char* argv[])
     }   
 
     free(prompt);
+    free_transformer_data(&transformer);
+    free_tokenizer_data(&tokenizer);
     sceKernelExitGame();
     return 0;
 }

@@ -82,11 +82,13 @@ typedef struct {
 //    ssize_t file_size; // size of the checkpoint file in bytes
 } Transformer;
 
+extern char* g_weights_memory_block;
 
 void build_transformer(Transformer *t, char* checkpoint_path);
 void free_transformer(Transformer* t);
 void load_transformer(Transformer* t);
-
+void load_transformer(Transformer* t);
+void free_transformer_data(Transformer* t); // <--- ADICIONE ESTA LINHA
 // void REU_getf(REUPtr ptr, volatile float* out, uint16_t size);
 // void REU_putf(REUPtr ptr, volatile float* in, uint16_t size);
 

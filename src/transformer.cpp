@@ -8,9 +8,13 @@ Esse arquivo é quase todo readaptado.
 Funções com o prefixo REU_ e a struct REU são removidas.
 */
 
-const unsigned char config_bin[] = {
-    #embed CONFIG_BIN_PATH
-};
+// const unsigned char config_bin[] = {
+//     #embed CONFIG_BIN_PATH
+// };
+
+char* g_weights_memory_block = NULL;
+
+
 
 void malloc_run_state(Transformer* t) {
     RunState* runstate = &t->state;
@@ -104,13 +108,35 @@ void memory_map_weights(Transformer* t, char* weights_ptr) {
     w->wcls = p->shared_weights ? w->token_embedding_table : (float*)ptr;
 }
 
-char* g_weights_memory_block = NULL;
 
 void load_transformer(Transformer* t)
 {
-    t->config = (Config*)config_bin;
+    // ----- 1. CARREGAR config.bin -----
+    FILE* config_file = fopen(CONFIG_BIN_PATH, "rb");
+    if (config_file == NULL) {
+        pspDebugScreenPrintf("ERRO FATAL: Nao foi possivel abrir config.bin!\n");
+        while(1); // Trava o programa para vermos o erro
+    }
 
-    FILE* file = fopen("build/weights.psp", "rb");
+    // Alocar memória para a struct de configuração
+    t->config = (Config*)malloc(sizeof(Config));
+    if (t->config == NULL) {
+        pspDebugScreenPrintf("ERRO FATAL: malloc falhou para t->config!\n");
+        fclose(config_file);
+        while(1);
+    }
+
+    // Ler o arquivo diretamente para dentro da struct
+    fread(t->config, sizeof(Config), 1, config_file);
+    fclose(config_file);
+    
+    // Verificação opcional, mas recomendada, para ver se os valores estão corretos
+    // (Lembre-se de corrigir o script Python para evitar problemas de padding)
+    pspDebugScreenPrintf("Config carregada: dim=%d, layers=%d, vocab=%d\n", 
+                         t->config->dimension, t->config->number_of_layers, t->config->vocab_size);
+    sceKernelDelayThread(1000000);
+
+    FILE* file = fopen(WEIGHTS_PSP_PATH, "rb");
     if (file == NULL) {
         printf("Error: can't open weights.psp\n");
         return;
@@ -130,6 +156,7 @@ void load_transformer(Transformer* t)
     }
     fread(g_weights_memory_block, 1, file_size, file);
     fclose(file);
+    sceKernelDcacheWritebackInvalidateAll(); 
 
     // verificando a assinatura posta antes
     uint32_t magic = *(uint32_t*)g_weights_memory_block;
@@ -143,4 +170,26 @@ void load_transformer(Transformer* t)
     memory_map_weights(t, weights_ptr);
 
     malloc_run_state(t); //alocando os buffers de estado (trabalho) de RunState
+}
+
+// Função para liberar a memória do transformer
+void free_transformer_data(Transformer* t) {
+    // Libera os buffers do RunState
+    free(t->state.x);
+    free(t->state.xb);
+    free(t->state.xb2);
+    free(t->state.hb);
+    free(t->state.hb2);
+    free(t->state.logits);
+    free(t->state.fcir);
+    free(t->state.q);
+    free(t->state.att);
+    free(t->state.key_cache);
+    free(t->state.value_cache);
+
+    // Libera a struct de configuração
+    if (t->config) free(t->config);
+
+    // Libera o grande bloco de memória dos pesos
+    if (g_weights_memory_block) free(g_weights_memory_block);
 }

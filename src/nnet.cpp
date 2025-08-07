@@ -12,37 +12,37 @@ h1buff: buffer para a attention heads
 h2buff; buffer para a attention heads
 */
 
-float *wifbuf;
-float *xobuf;
-float *h1buff;
-float *h2buff;
+// float *wifbuf;
+// float *xobuf;
+// float *h1buff;
+// float *h2buff;
 
-void nnet_init(Transformer* transformer) {
-    Config* p = transformer->config;
-    uint8_t max_dimesion = p->hidden_dimension;
-    uint8_t dimesion = p->dimension;
-    uint8_t head_size = dimesion / p->number_of_heads;
+// void nnet_init(Transformer* transformer) {
+//     Config* p = transformer->config;
+//     uint8_t max_dimesion = p->hidden_dimension;
+//     uint8_t dimesion = p->dimension;
+//     uint8_t head_size = dimesion / p->number_of_heads;
 
-    // checagens p/ garantir que o buffer wifbuf é grande
-    if (p->dimension > max_dimesion) {
-        max_dimesion = p->dimension;
-    }
+//     // checagens p/ garantir que o buffer wifbuf é grande
+//     if (p->dimension > max_dimesion) {
+//         max_dimesion = p->dimension;
+//     }
 
-    if (((p->dimension * p->number_key_value_heads) / p->number_of_heads) > max_dimesion) {
-        max_dimesion = (p->dimension * p->number_key_value_heads) / p->number_of_heads;
-    }
+//     if (((p->dimension * p->number_key_value_heads) / p->number_of_heads) > max_dimesion) {
+//         max_dimesion = (p->dimension * p->number_key_value_heads) / p->number_of_heads;
+//     }
 
-    wifbuf = (float*)malloc(max_dimesion*sizeof(float));
-    xobuf = (float*)malloc(dimesion*sizeof(float));
+//     wifbuf = (float*)malloc(max_dimesion*sizeof(float));
+//     xobuf = (float*)malloc(dimesion*sizeof(float));
 
-    h1buff = (float*)malloc(head_size * sizeof(float));
-    h2buff = (float*)malloc(head_size * sizeof(float));
+//     h1buff = (float*)malloc(head_size * sizeof(float));
+//     h2buff = (float*)malloc(head_size * sizeof(float));
 
-    if (!wifbuf || !xobuf || !h1buff || !h2buff) {
-        printf("Error: can't allocate buffers.\n");
-        return;
-    }
-}
+//     if (!wifbuf || !xobuf || !h1buff || !h2buff) {
+//         printf("Error: can't allocate buffers.\n");
+//         return;
+//     }
+// }
 
 // o = x * w
 void rmsnorm(float* o, float* x, float* weight, uint8_t size) {

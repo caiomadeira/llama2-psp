@@ -40,5 +40,7 @@ void encode(Tokenizer* t,
 char* decode(Tokenizer* t,
             int16_t prev_token,
             int16_t token);
+void free_tokenizer_data(Tokenizer* t);
+
 
 #endif

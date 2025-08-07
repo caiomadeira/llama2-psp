@@ -7,9 +7,9 @@
 // uma forma moderna de carrgear um arquivo de forma rápida
 //TODO: Verificar se o compilador GCC (a versao) do toolchain
 // do PSP suporta esse #embed do C23
-const unsigned char tokenizer_bin[] = {
-    #embed TOKENIZER_BIN_PATH
-};
+// const unsigned char tokenizer_bin[] = {
+//     #embed TOKENIZER_BIN_PATH
+// };
 
 // https://github.com/gcc-mirror/gcc/blob/master/libiberty/bsearch.c
 char* binary_search(char *key, char **base0, size_t nmemb, size_t size, int16_t (*compar)(const char*, const char *)) {
@@ -50,8 +50,36 @@ int16_t str_lookup(char *str, Tokenizer *t) {
 
 void load_tokenizer(Tokenizer* t) {
 
-    t->mmap_size = sizeof(tokenizer_bin);
-    t->mmap_ptr = (char*)tokenizer_bin;
+    // ----- 1. CARREGAR tokenizer.bin -----
+    FILE* file = fopen(TOKENIZER_BIN_PATH, "rb");
+    if (file == NULL) {
+        pspDebugScreenPrintf("ERRO FATAL: Nao foi possivel abrir tokenizer.bin!\n");
+        while(1);
+    }
+
+    // Descobrir o tamanho do arquivo
+    fseek(file, 0, SEEK_END);
+    t->mmap_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // Alocar memória para o tokenizer
+    t->mmap_ptr = (char*)malloc(t->mmap_size);
+    if (t->mmap_ptr == NULL) {
+        pspDebugScreenPrintf("ERRO FATAL: malloc falhou para o tokenizer!\n");
+        fclose(file);
+        while(1);
+    }
+
+    // Ler o arquivo para o buffer na memória
+    size_t bytes_read = fread(t->mmap_ptr, 1, t->mmap_size, file);
+    if (bytes_read != t->mmap_size) {
+        pspDebugScreenPrintf("ERRO FATAL: Falha ao ler o arquivo tokenizer.bin inteiro.\n");
+        free(t->mmap_ptr);
+        fclose(file);
+        while(1);
+    }
+    fclose(file);
+    sceKernelDcacheWritebackInvalidateAll(); 
 
     t->max_token_length = 7;
 
@@ -211,4 +239,12 @@ void encode(Tokenizer* t, char *text, int8_t bos, int8_t eos, int16_t *tokens, u
     // add optional EOS (=2) token, if desired
     if (eos) tokens[(*n_tokens)++] = 2;
 
+}
+
+void free_tokenizer_data(Tokenizer* t) {
+    if (t->mmap_ptr) free(t->mmap_ptr);
+    if (t->vocab) free(t->vocab);
+    if (t->sorted_vocab_str) free(t->sorted_vocab_str);
+    if (t->str_buffer) free(t->str_buffer);
+    // Os outros ponteiros (vocab_scores, etc.) apontam para dentro do mmap_ptr, então não precisam de free.
 }

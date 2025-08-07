@@ -29,7 +29,7 @@ char* generate(Transformer *transformer, Tokenizer *tokenizer, Sampler *sampler,
 
 
     // prepare nnet buffers
-    nnet_init(transformer);
+    //nnet_init(transformer);
 
     /*
     Começa o loop principal

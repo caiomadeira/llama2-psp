@@ -23,6 +23,10 @@
 #define WEIGHTS_PSP_PATH "weights.psp"
 #define CONFIG_BIN_PATH "config.bin"
 
+// #define TOKENIZER_BIN_PATH "ms0:/PSP/GAME/llama2psp/tokenizer.bin"
+// #define WEIGHTS_PSP_PATH "ms0:/PSP/GAME/llama2psp/weights.psp"
+// #define CONFIG_BIN_PATH "ms0:/PSP/GAME/llama2psp/config.bin"
+
 #define print pspDebugScreenPrintf
 //volatile int done = 0;
 extern volatile int done;

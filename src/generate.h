@@ -6,10 +6,6 @@
 #include "sampler.h"
 #include "nnet.h"
 
-char* generate(Transformer *transformer, 
-              Tokenizer *tokenizer,
-              Sampler *sampler,
-              char *prompt,
-              uint16_t steps);
+char* generate(Transformer *transformer, Tokenizer *tokenizer, Sampler *sampler, char *prompt, int steps);
 
 #endif

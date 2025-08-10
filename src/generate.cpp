@@ -2,7 +2,7 @@
 /*
 Generation Loop
 */
-char* generate(Transformer *transformer, Tokenizer *tokenizer, Sampler *sampler, char *prompt, uint16_t steps) 
+char* generate(Transformer *transformer, Tokenizer *tokenizer, Sampler *sampler, char *prompt, int steps) 
 {
     char* empty_prompt = (char*)"";
     if (prompt == NULL) {
@@ -10,16 +10,16 @@ char* generate(Transformer *transformer, Tokenizer *tokenizer, Sampler *sampler,
     }
 
     // Encode the (string) prompt into tokens sequence
-    uint16_t num_prompt_tokens = 0;
+    int num_prompt_tokens = 0;
 
     pspDebugScreenSetXY(0, 0);
-    pspDebugScreenPrintf("Tokenizando...");
+    print("Tokenizando...");
 
-    int16_t* prompt_tokens = (int16_t*)malloc((strlen(prompt)+3) * sizeof(int16_t));
+    int* prompt_tokens = (int*)malloc((strlen(prompt)+3) * sizeof(int));
     encode(tokenizer, prompt, 1, 0, prompt_tokens, &num_prompt_tokens);
     if (num_prompt_tokens < 1) {
         pspDebugScreenSetXY(0, 0);
-        pspDebugScreenPrintf("ERROR: Not tokens");
+        pspDebugScreenPrintf("ERROR: Not tokens in prompt");
         while(1);
     }
 
@@ -39,18 +39,18 @@ char* generate(Transformer *transformer, Tokenizer *tokenizer, Sampler *sampler,
     pos: posição na sequencia. 
     */
 
-    // alocando um buffer grande
-    size_t result_buffer_size = 4096;
+    // alocando um buffer grande para a resposta
+    int result_buffer_size = 4096;
     char* result_buffer = (char*)malloc(result_buffer_size);
     if (!result_buffer) { return NULL; }
     result_buffer[0] = '\0';
 
-    int16_t next;
-    int16_t token = prompt_tokens[0];
-    int16_t pos = 0;
+    int next; // vai guardar o proximo token na sequencia
+    int token = prompt_tokens[0]; // começa com o primeiro token do prompt
+    int pos = 0; // posição na sequencia
     while(pos < steps) {
         pspDebugScreenSetXY(0, 0);
-        pspDebugScreenPrintf("Gerando token %d de %d...", pos + 1, steps);        
+        print("Gerando token %d de %d...", pos + 1, steps);        
         // encaminha o transformer pra obter logits pro proximo token
         float* logits = forward(transformer, token, pos);
 
@@ -68,7 +68,7 @@ char* generate(Transformer *transformer, Tokenizer *tokenizer, Sampler *sampler,
             Condição de término dependente de dados: o token BOS (=1)
             delimita sequências.
         */
-        if (next == 1) break;
+        //if (next == 1) break; // i comment to make more tokens generated
         // imprima o token como string, decodifica com o objeto Tokenizer
         char* piece = decode(tokenizer, token, next);
         // pspDebugScreenPrintf("%s", piece);
@@ -79,12 +79,6 @@ char* generate(Transformer *transformer, Tokenizer *tokenizer, Sampler *sampler,
 
         token = next;
 
-        SceCtrlData pad;
-        sceCtrlPeekBufferPositive(&pad, 1); 
-        if (pad.Buttons & PSP_CTRL_START) {
-            pspDebugScreenPrintf("\n[Cancelado pelo usuário]\n");
-            break;
-        }
     }
 
     free(prompt_tokens);

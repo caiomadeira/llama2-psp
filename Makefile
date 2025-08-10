@@ -13,7 +13,7 @@ LDFLAGS =
 LIBS = -lpspgu -lpsppower
 
 EXTRA_TARGETS = EBOOT.PBP
-PSP_EBOOT_TITLE = Llama22
+PSP_EBOOT_TITLE = New Llama2
 
 PSPSDK=$(shell psp-config --pspsdk-path)
 include $(PSPSDK)/lib/build.mak

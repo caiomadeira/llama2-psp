@@ -12,239 +12,352 @@
 // };
 
 // https://github.com/gcc-mirror/gcc/blob/master/libiberty/bsearch.c
-char* binary_search(char *key, char **base0, size_t nmemb, size_t size, int16_t (*compar)(const char*, const char *)) {
-    const char *base = (const char* )base0;
-    int16_t lim, cmp;
-    const char *p;
+void* bsearch (const void *key, const void *base0,
+         size_t nmemb, size_t size,
+         int (*compar)(const void *, const void *))
+{
+	const char *base = (const char *) base0;
+	int lim, cmp;
+	const void *p;
 
-    for (lim = nmemb; lim != 0; lim >>=1) {
-        p = base + (lim >> 1) * size;
-        cmp = (*compar)(key, p);
-        if (cmp == 0) return (char*)p;
-        if (cmp > 0) {
-            base = (const char *)p + size;
-            base = (const char*)p + size;
-            lim--;
-        }
-    }
-    return (NULL);
+	for (lim = nmemb; lim != 0; lim >>= 1) {
+		p = base + (lim >> 1) * size;
+		cmp = (*compar)(key, p);
+		if (cmp == 0)
+			return (void *)p;
+		if (cmp > 0) {	/* key > p: move right */
+			base = (const char *)p + size;
+			lim--;
+		} /* else move left */
+	}
+	return (NULL);
 }
 
-int16_t compare_tokens(const char* a, const char* b) {
-    return strcmp((char*)a, *(char**)b);
+int compare_tokens(const void *a, const void *b) {
+	return strcmp(((TokenIndex *)a)->str, ((TokenIndex *)b)->str);
 }
 
-int16_t str_lookup(char *str, Tokenizer *t) { 
-    char* res = binary_search(str 
-    ,t->sorted_vocab_str
-    ,t->vocab_size, sizeof(char*), compare_tokens);
-    if (res != NULL) {
-        //int16_t index = ((uint16_t)(res) - (uint16_t)(t->sorted_vocab_str)) / sizeof(char*);
-        // O compilador C++ calcula o deslocamento em "elementos" automaticamente.
-        //int16_t index = (res - t->sorted_vocab_str);
-        uintptr_t index = ((uintptr_t)res - (uintptr_t)t->sorted_vocab_str) / sizeof(char*);
-        return t->sorted_vocab_id[index];
-    }
-    return -1;
+void build_tokenizer(Tokenizer *t, char *tokenizer_path, int vocab_size)
+{
+	// i should have written the vocab_size into the tokenizer file... sigh
+	t->vocab_size = vocab_size;
+	// malloc space to hold the scores and the strings
+	t->vocab = (char **)malloc(vocab_size * sizeof(char *));
+	t->vocab_scores = (float *)malloc(vocab_size * sizeof(float));
+	t->sorted_vocab = NULL; // initialized lazily
+	for (int i = 0; i < 256; i++)
+	{
+		t->byte_pieces[i * 2] = (unsigned char)i;
+		t->byte_pieces[i * 2 + 1] = '\0';
+	}
+	// read in the file
+	FILE *file = fopen(tokenizer_path, "rb");
+	if (!file)
+	{
+		print("couldn't load %s\n", tokenizer_path);
+		delay(1000);
+		exit(EXIT_FAILURE);
+	}
+	if (fread(&t->max_token_length, sizeof(int), 1, file) != 1)
+	{
+		print("failed read\n");
+		delay(1000);
+		exit(EXIT_FAILURE);
+	}
+	int len;
+	for (int i = 0; i < vocab_size; i++)
+	{
+		if (fread(t->vocab_scores + i, sizeof(float), 1, file) != 1)
+		{
+			print("failed read\n");
+			delay(1000);
+			exit(EXIT_FAILURE);
+		}
+		if (fread(&len, sizeof(int), 1, file) != 1)
+		{
+			print("failed read\n");
+			delay(1000);
+			exit(EXIT_FAILURE);
+		}
+		t->vocab[i] = (char *)malloc(len + 1);
+		if (fread(t->vocab[i], len, 1, file) != 1)
+		{
+			print("failed read\n");
+			delay(1000);
+			exit(EXIT_FAILURE);
+		}
+		t->vocab[i][len] = '\0'; // add the string terminating token
+	}
+	fclose(file);
 }
 
-void load_tokenizer(Tokenizer* t) {
 
-    // ----- 1. CARREGAR tokenizer.bin -----
-    FILE* file = fopen(TOKENIZER_BIN_PATH, "rb");
-    if (file == NULL) {
-        pspDebugScreenPrintf("ERRO FATAL: Nao foi possivel abrir tokenizer.bin!\n");
-        while(1);
-    }
-
-    // Descobrir o tamanho do arquivo
-    fseek(file, 0, SEEK_END);
-    t->mmap_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    // Alocar memória para o tokenizer
-    t->mmap_ptr = (char*)malloc(t->mmap_size);
-    if (t->mmap_ptr == NULL) {
-        pspDebugScreenPrintf("ERRO FATAL: malloc falhou para o tokenizer!\n");
-        fclose(file);
-        while(1);
-    }
-
-    // Ler o arquivo para o buffer na memória
-    size_t bytes_read = fread(t->mmap_ptr, 1, t->mmap_size, file);
-    if (bytes_read != t->mmap_size) {
-        pspDebugScreenPrintf("ERRO FATAL: Falha ao ler o arquivo tokenizer.bin inteiro.\n");
-        free(t->mmap_ptr);
-        fclose(file);
-        while(1);
-    }
-    fclose(file);
-    sceKernelDcacheWritebackInvalidateAll(); 
-
-    t->max_token_length = 7;
-
-    // Map the data to Tokenizer structure
-    char* ptr = t->mmap_ptr;
-
-    t->vocab_size = *(uint16_t*)ptr; // XXX: get REU byte (?int is 32 or 16?)
-    ptr += sizeof(uint16_t);
-    t->vocab = (char**)malloc(t->vocab_size * sizeof(char*));
-    t->sorted_vocab_str = (char**)malloc(t->vocab_size * sizeof(char*));
-
-    t->vocab_scores = (float*)ptr;
-    ptr += t->vocab_size * sizeof(float);
-    t->vocab_len = (uint8_t*)ptr;
-    ptr += t->vocab_size * sizeof(uint8_t);
-    t->sorted_vocab_id = (uint16_t*)ptr;
-    ptr += t->vocab_size * sizeof(uint16_t);
-    for (uint16_t i=0; i < t->vocab_size; i++) {
-        t->vocab[i] = (char*)ptr;
-        ptr +=  t->vocab_len[i];
-    }
-    for (uint16_t i=0; i < t->vocab_size; i++) {
-        t->sorted_vocab_str[i] = t->vocab[t->sorted_vocab_id[i]];
-    }
-
-    // create a temporary buffer that will store merge candidates of always two consecutive tokens
-    // *2 for concat, +1 for null terminator +2 for UTF8 (in case max_token_length is 1)
-    t->str_buffer = (char*)malloc((t->max_token_length*2 +1 +2) * sizeof(char));
-
-    for (uint16_t i = 0; i < 256; i++) {
-        t->byte_pieces[i * 2] = (unsigned char)i;
-        t->byte_pieces[i * 2 + 1] = '\0';
-    }
+int str_lookup(char *str, TokenIndex *sorted_vocab, int vocab_size)
+{
+	// efficiently find the perfect match for str in vocab, return its index or -1 if not found
+	TokenIndex tok = {.str = str}; // acts as the key to search for
+	TokenIndex *res = (TokenIndex*)bsearch(&tok, sorted_vocab, vocab_size, sizeof(TokenIndex), compare_tokens);
+	return res != NULL ? res->id : -1;
 }
 
-char* decode(Tokenizer* t, int16_t prev_token, int16_t token) {
-    char *piece = t->vocab[token];
-    // following BOS (1) token, sentencepiece decoder strips any leading whitespace (see PR #89)
-    if (prev_token == 1 && piece[0] == ' ') { piece++; }
-    // careful, some tokens designate raw bytes, and look like e.g. '<0x01>'
-    // parse this and convert and return the actual byte
-    unsigned char byte_val;
-    if (piece[0] == '<' && piece[1] == '0' && piece[2] == 'x' && piece[5] == '>') {
-        byte_val = ((piece[3] >= 'A' ? piece[3] - 'A' + 10 : (piece[3] >= 'a' ? piece[3] - 'a' + 10 : piece[3] - '0')) * 16) +
-                   (piece[4] >= 'A' ? piece[4] - 'A' + 10 : (piece[4] >= 'a' ? piece[4] - 'a' + 10 : piece[4] - '0'));
-        piece = (char*)t->byte_pieces + byte_val * 2;
-    }
-    return piece;
+// void load_tokenizer(Tokenizer* t) {
+
+//     // ----- 1. CARREGAR tokenizer.bin -----
+//     FILE* file = fopen(TOKENIZER_BIN_PATH, "rb");
+//     if (file == NULL) {
+//         pspDebugScreenPrintf("ERRO FATAL: Nao foi possivel abrir tokenizer.bin!\n");
+//         while(1);
+//     }
+
+//     // Descobrir o tamanho do arquivo
+//     fseek(file, 0, SEEK_END);
+//     t->mmap_size = ftell(file);
+//     fseek(file, 0, SEEK_SET);
+
+//     // Alocar memória para o tokenizer
+//     t->mmap_ptr = (char*)malloc(t->mmap_size);
+//     if (t->mmap_ptr == NULL) {
+//         pspDebugScreenPrintf("ERRO FATAL: malloc falhou para o tokenizer!\n");
+//         fclose(file);
+//         while(1);
+//     }
+
+//     // Ler o arquivo para o buffer na memória
+//     size_t bytes_read = fread(t->mmap_ptr, 1, t->mmap_size, file);
+//     if (bytes_read != t->mmap_size) {
+//         pspDebugScreenPrintf("ERRO FATAL: Falha ao ler o arquivo tokenizer.bin inteiro.\n");
+//         free(t->mmap_ptr);
+//         fclose(file);
+//         while(1);
+//     }
+//     fclose(file);
+//     sceKernelDcacheWritebackInvalidateAll(); 
+
+//     t->max_token_length = 7;
+
+//     // Map the data to Tokenizer structure
+//     char* ptr = t->mmap_ptr;
+
+//     t->vocab_size = *(uint16_t*)ptr; // XXX: get REU byte (?int is 32 or 16?)
+//     ptr += sizeof(uint16_t);
+//     t->vocab = (char**)malloc(t->vocab_size * sizeof(char*));
+//     t->sorted_vocab_str = (char**)malloc(t->vocab_size * sizeof(char*));
+
+//     t->vocab_scores = (float*)ptr;
+//     ptr += t->vocab_size * sizeof(float);
+//     t->vocab_len = (uint8_t*)ptr;
+//     ptr += t->vocab_size * sizeof(uint8_t);
+//     t->sorted_vocab_id = (uint16_t*)ptr;
+//     ptr += t->vocab_size * sizeof(uint16_t);
+//     for (uint16_t i=0; i < t->vocab_size; i++) {
+//         t->vocab[i] = (char*)ptr;
+//         ptr +=  t->vocab_len[i];
+//     }
+//     for (uint16_t i=0; i < t->vocab_size; i++) {
+//         t->sorted_vocab_str[i] = t->vocab[t->sorted_vocab_id[i]];
+//     }
+
+//     // create a temporary buffer that will store merge candidates of always two consecutive tokens
+//     // *2 for concat, +1 for null terminator +2 for UTF8 (in case max_token_length is 1)
+//     t->str_buffer = (char*)malloc((t->max_token_length*2 +1 +2) * sizeof(char));
+
+//     for (uint16_t i = 0; i < 256; i++) {
+//         t->byte_pieces[i * 2] = (unsigned char)i;
+//         t->byte_pieces[i * 2 + 1] = '\0';
+//     }
+// }
+
+char *decode(Tokenizer *t, int prev_token, int token)
+{
+	char *piece = t->vocab[token];
+	// following BOS (1) token, sentencepiece decoder strips any leading whitespace (see PR #89)
+	if (prev_token == 1 && piece[0] == ' ')
+	{
+		piece++;
+	}
+	// careful, some tokens designate raw bytes, and look like e.g. '<0x01>'
+	// parse this and convert and return the actual byte
+	unsigned char byte_val;
+
+	if (sscanf(piece, "<0x%02hhX>", &byte_val) == 1)
+	{
+		piece = (char *)t->byte_pieces + byte_val * 2;
+	}
+
+	return piece;
 }
 
-void encode(Tokenizer* t, char *text, int8_t bos, int8_t eos, int16_t *tokens, uint16_t *n_tokens) {
-    // encode the string text (input) into an upper-bound preallocated tokens[] array
-    // bos != 0 means prepend the BOS token (=1), eos != 0 means append the EOS token (=2)
-    if (text == NULL) { 
-        exit(1); 
-    }
+// void safe_printf(char *piece)
+// {
+// 	// piece might be a raw byte token, and we only want to print printable chars or whitespace
+// 	// because some of the other bytes can be various control codes, backspace, etc.
+// 	if (piece == NULL || piece[0] == '\0')
+// 	{
+//         return; 
+//     }
 
-    size_t str_len = 0;
+// 	if (piece[1] == '\0')
+// 	{
+// 		unsigned char byte_val = piece[0];
+// 		if (!(isprint(byte_val) || isspace(byte_val)))
+// 		{
+// 			return; // bad byte, don't print it
+// 		}
 
-    // start at 0 tokens
-    *n_tokens = 0;
+// 	}
+// 	print("%s", piece);
+// }
 
-    // add optional BOS (=1) token, if desired
-    if (bos) tokens[(*n_tokens)++] = 1;
+void encode(Tokenizer *t, char *text, int8_t bos, int8_t eos, int *tokens, int *n_tokens)
+{
+	// encode the string text (input) into an upper-bound preallocated tokens[] array
+	// bos != 0 means prepend the BOS token (=1), eos != 0 means append the EOS token (=2)
+	if (text == NULL)
+	{
+		pspDebugScreenPrintf("cannot encode NULL text\n");
+		delay(1000);
+		exit(EXIT_FAILURE);
+	}
 
-    // add_dummy_prefix is true by default
-    // so prepend a dummy prefix token to the input string, but only if text != ""
-    // TODO: pretty sure this isn't correct in the general case but I don't have the
-    // energy to read more of the sentencepiece code to figure out what it's doing
-    if (text[0] != '\0') {
-        int16_t dummy_prefix = str_lookup((char*)" ", t);
-        tokens[(*n_tokens)++] = dummy_prefix;
-    }
+	if (t->sorted_vocab == NULL)
+	{
+		// lazily malloc and sort the vocabulary
+		t->sorted_vocab = (TokenIndex*)malloc(t->vocab_size * sizeof(TokenIndex));
+		for (int i = 0; i < t->vocab_size; i++)
+		{
+			t->sorted_vocab[i].str = t->vocab[i];
+			t->sorted_vocab[i].id = i;
+		}
+		qsort(t->sorted_vocab, t->vocab_size, sizeof(TokenIndex), compare_tokens);
+	}
 
-    // Okay UTF-8 time. This will get messy. Here is the reference from Wikipedia:
-    // Code point ↔ UTF-8 conversion
-    // First code point	Last code point	Byte 1	Byte 2	Byte 3	Byte 4
-    // U+0000	U+007F	    0xxxxxxx
-    // U+0080	U+07FF	    110xxxxx	10xxxxxx
-    // U+0800	U+FFFF	    1110xxxx	10xxxxxx	10xxxxxx
-    // U+10000	U+10FFFF    11110xxx	10xxxxxx	10xxxxxx	10xxxxxx
+	// create a temporary buffer that will store merge candidates of always two consecutive tokens
+	// *2 for concat, +1 for null terminator +2 for UTF8 (in case max_token_length is 1)
+	char *str_buffer = (char*)malloc((t->max_token_length * 2 + 1 + 2) * sizeof(char));
+	int str_len = 0;
 
-    // process the raw (UTF-8) byte sequence of the input string
-    for (char *c = text; *c != '\0'; c++) {
+	// start at 0 tokens
+	*n_tokens = 0;
 
-        // reset buffer if the current byte is ASCII or a leading byte
-        // 0xC0 is 11000000, so (*c & 0xC0) keeps the first 2 bits and zeros the rest
-        // 0x80 is 10000000
-        // in UTF-8, all continuation bytes start with "10" in first two bits
-        // so in English this is: "if this byte is not a continuation byte"
-        if ((*c & 0xC0) != 0x80) {
-            // this byte must be either a leading byte (11...) or an ASCII char (0x...)
-            // => reset our location, as we're starting a new UTF-8 codepoint
-            str_len = 0;
-        }
+	// add optional BOS (=1) token, if desired
+	if (bos)
+		tokens[(*n_tokens)++] = 1;
 
-        // append the current byte to the buffer
-        t->str_buffer[str_len++] = *c; // ++ is post-increment, incremented after this line
-        t->str_buffer[str_len] = '\0';
+	// add_dummy_prefix is true by default
+	// so prepend a dummy prefix token to the input string, but only if text != ""
+	// TODO: pretty sure this isn't correct in the general case but I don't have the
+	// energy to read more of the sentencepiece code to figure out what it's doing
+	if (text[0] != '\0')
+	{
+		int dummy_prefix = str_lookup(" ", t->sorted_vocab, t->vocab_size);
+		tokens[(*n_tokens)++] = dummy_prefix;
+	}
 
-        // while the next character is a continuation byte, continue appending
-        // but if there are too many of them, just stop to avoid overruning str_buffer size.
-        if ((*(c+1) & 0xC0) == 0x80 && str_len < 4) {
-            continue;
-        }
+	// Okay UTF-8 time. This will get messy. Here is the reference from Wikipedia:
+	// Code point ↔ UTF-8 conversion
+	// First code point	Last code point	Byte 1	Byte 2	Byte 3	Byte 4
+	// U+0000	U+007F	    0xxxxxxx
+	// U+0080	U+07FF	    110xxxxx	10xxxxxx
+	// U+0800	U+FFFF	    1110xxxx	10xxxxxx	10xxxxxx
+	// U+10000	U+10FFFF    11110xxx	10xxxxxx	10xxxxxx	10xxxxxx
 
-        // ok c+1 is not a continuation byte, so we've read in a full codepoint
-        int16_t id = str_lookup(t->str_buffer, t);
+	// process the raw (UTF-8) byte sequence of the input string
+	for (char *c = text; *c != '\0'; c++)
+	{
 
-        if (id != -1) {
-            // we found this codepoint in vocab, add it as a token
-            tokens[(*n_tokens)++] = id;
-        } else {
-            // byte_fallback encoding: just encode each byte as a token
-            // +3 is here because the first 3 vocab elements are <unk>, <s>, </s>
-            // so the individual bytes only start at index 3
-            for (size_t i=0; i < str_len; i++) {
-                tokens[(*n_tokens)++] = (unsigned char)t->str_buffer[i] + 3;
-            }
-        }
-        str_len = 0; // protect against a sequence of stray UTF8 continuation bytes
-    }
+		// reset buffer if the current byte is ASCII or a leading byte
+		// 0xC0 is 11000000, so (*c & 0xC0) keeps the first 2 bits and zeros the rest
+		// 0x80 is 10000000
+		// in UTF-8, all continuation bytes start with "10" in first two bits
+		// so in English this is: "if this byte is not a continuation byte"
+		if ((*c & 0xC0) != 0x80)
+		{
+			// this byte must be either a leading byte (11...) or an ASCII char (0x...)
+			// => reset our location, as we're starting a new UTF-8 codepoint
+			str_len = 0;
+		}
 
-    // merge the best consecutive pair each iteration, according the scores in vocab_scores
-    while (1) {
-//        float best_score = -0.0000000001;
-        float best_score = -1000000000;
-        int16_t best_id = -1;
-        int16_t best_idx = -1;
+		// append the current byte to the buffer
+		str_buffer[str_len++] = *c; // ++ is post-increment, incremented after this line
+		str_buffer[str_len] = '\0';
 
-        for (int16_t i=0; i < (*n_tokens-1); i++) {
-            // check if we can merge the pair (tokens[i], tokens[i+1])
-            sprintf(t->str_buffer, "%s%s", t->vocab[tokens[i]], t->vocab[tokens[i+1]]);
+		// while the next character is a continuation byte, continue appending
+		// but if there are too many of them, just stop to avoid overruning str_buffer size.
+		if ((*(c + 1) & 0xC0) == 0x80 && str_len < 4)
+		{
+			continue;
+		}
 
-            int16_t id = str_lookup(t->str_buffer, t);
-            if (id != -1 && t->vocab_scores[id] > best_score) {
-                // this merge pair exists in vocab! record its score and position
-                best_score = t->vocab_scores[id];
-                best_id = id;
-                best_idx = i;
-            }
-        }
+		// ok c+1 is not a continuation byte, so we've read in a full codepoint
+		int id = str_lookup(str_buffer, t->sorted_vocab, t->vocab_size);
 
-        if (best_idx == -1) {
-            break; // we couldn't find any more pairs to merge, so we're done
-        }
+		if (id != -1)
+		{
+			// we found this codepoint in vocab, add it as a token
+			tokens[(*n_tokens)++] = id;
+		}
+		else
+		{
+			// byte_fallback encoding: just encode each byte as a token
+			// +3 is here because the first 3 vocab elements are <unk>, <s>, </s>
+			// so the individual bytes only start at index 3
+			for (int i = 0; i < str_len; i++)
+			{
+				tokens[(*n_tokens)++] = (unsigned char)str_buffer[i] + 3;
+			}
+		}
+		str_len = 0; // protect against a sequence of stray UTF8 continuation bytes
+	}
 
-        // merge the consecutive pair (best_idx, best_idx+1) into new token best_id
-        tokens[best_idx] = best_id;
-        // delete token at position best_idx+1, shift the entire sequence back 1
-        for (int16_t i = best_idx+1; i < (*n_tokens-1); i++) {
-            tokens[i] = tokens[i+1];
-        }
-        (*n_tokens)--; // token length decreased
-    }
+	// merge the best consecutive pair each iteration, according the scores in vocab_scores
+	while (1)
+	{
+		float best_score = -1e10;
+		int best_id = -1;
+		int best_idx = -1;
 
-    // add optional EOS (=2) token, if desired
-    if (eos) tokens[(*n_tokens)++] = 2;
+		for (int i = 0; i < (*n_tokens - 1); i++)
+		{
+			// check if we can merge the pair (tokens[i], tokens[i+1])
+			pspDebugScreenPrintf(str_buffer, "%s%s", t->vocab[tokens[i]], t->vocab[tokens[i + 1]]);
+			int id = str_lookup(str_buffer, t->sorted_vocab, t->vocab_size);
+			if (id != -1 && t->vocab_scores[id] > best_score)
+			{
+				// this merge pair exists in vocab! record its score and position
+				best_score = t->vocab_scores[id];
+				best_id = id;
+				best_idx = i;
+			}
+		}
 
+		if (best_idx == -1)
+		{
+			break; // we couldn't find any more pairs to merge, so we're done
+		}
+
+		// merge the consecutive pair (best_idx, best_idx+1) into new token best_id
+		tokens[best_idx] = best_id;
+		// delete token at position best_idx+1, shift the entire sequence back 1
+		for (int i = best_idx + 1; i < (*n_tokens - 1); i++)
+		{
+			tokens[i] = tokens[i + 1];
+		}
+		(*n_tokens)--; // token length decreased
+	}
+
+	// add optional EOS (=2) token, if desired
+	if (eos)
+		tokens[(*n_tokens)++] = 2;
+
+	free(str_buffer);
 }
 
-void free_tokenizer_data(Tokenizer* t) {
-    if (t->mmap_ptr) free(t->mmap_ptr);
-    if (t->vocab) free(t->vocab);
-    if (t->sorted_vocab_str) free(t->sorted_vocab_str);
-    if (t->str_buffer) free(t->str_buffer);
-    // Os outros ponteiros (vocab_scores, etc.) apontam para dentro do mmap_ptr, então não precisam de free.
+void free_tokenizer(Tokenizer *t)
+{
+	for (int i = 0; i < t->vocab_size; i++) {
+		free(t->vocab[i]);
+	}
+	free(t->vocab);
+	free(t->vocab_scores);
+	free(t->sorted_vocab);
 }

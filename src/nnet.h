@@ -5,8 +5,8 @@
 
 // Neural Net Blocks; the dynamics of the Transformer
 
-void nnet_init(Transformer* transformer);
-void softmax(uint16_t size);
-float *forward(Transformer* transformer, uint16_t token, uint16_t pos);
+//void nnet_init(Transformer* transformer);
+void softmax(float* x, int size);
+float *forward(Transformer* transformer, int token, int pos);
 
 #endif

@@ -13,32 +13,26 @@ de principal onde cada entrada no array é uma string que representa
 um token (ex: gato, ndo, the)
 
 */
+
+typedef struct {
+    char *str;
+    int id;
+} TokenIndex;
+
 typedef struct {
     char** vocab;
     float* vocab_scores;
-    char** sorted_vocab_str;
-    uint8_t* vocab_len;
-    uint16_t* sorted_vocab_id;
-    uint16_t vocab_size;
-    uint8_t max_token_length;
+    TokenIndex* sorted_vocab;
+    int vocab_size;
+    unsigned int  max_token_length;
     unsigned char byte_pieces[512];
-    char* mmap_ptr;
-    size_t mmap_size;
-    char *str_buffer;
 } Tokenizer;
 
 void load_tokenizer(Tokenizer* t);
-
+void build_tokenizer(Tokenizer *t, char *tokenizer_path, int vocab_size);
 // generate.cpp
-void encode(Tokenizer* t, 
-    char *text, 
-    int8_t bos, 
-    int8_t eos, 
-    int16_t *tokens, 
-    uint16_t *n_tokens);
-
-char* decode(Tokenizer* t,
-            int16_t prev_token,
-            int16_t token);
+void encode(Tokenizer *t, char *text, int8_t bos, int8_t eos, int *tokens, int *n_tokens);
+char *decode(Tokenizer *t, int prev_token, int token);
+void free_tokenizer(Tokenizer *t);
 
 #endif

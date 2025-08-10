@@ -1,93 +1,117 @@
 #ifndef TRANSFORMER_H
 #define TRANSFORMER_H
 
+// Headers padrão para tipos como uint16_t e ssize_t. É uma boa prática incluí-los.
+#include <stdint.h>
+#include <sys/types.h>
+
+// Seu header comum
 #include "common.h"
 
-/*
-Defini-se as 3 estruturas principais que organizam o modelo.
-*/
-
-// typedef uint32_t REUPtr;
+// =============================================================================
+// Definições das Estruturas do Modelo
+// =============================================================================
+// Estas structs são compatíveis entre C e C++, então não precisam
+// estar dentro do bloco 'extern "C"'.
 
 typedef struct {
-    uint16_t dimension; // transformer dimension
-    uint16_t hidden_dimension; // for ffn layers
-    uint16_t number_of_layers; // number of layers
-    uint16_t number_of_heads; // number of query heads
-    uint16_t number_key_value_heads; // number of key/value heads (can be < query heads because of multiquery)
-    uint16_t vocab_size; // vocabulary size, usually 256 (byte-level)
-    uint16_t sequence_len; // max sequence length
-    uint16_t shared_weights;
+    int dimension;             // Dimensão do transformer
+    int hidden_dimension;      // Dimensão das camadas FFN
+    int number_of_layers;      // Número de camadas
+    int number_of_heads;       // Número de cabeças de atenção (query)
+    int number_key_value_heads;// Número de cabeças de atenção (key/value)
+    int vocab_size;            // Tamanho do vocabulário
+    int sequence_len;          // Comprimento máximo da sequência
 } Config;
 
 typedef struct {
-    // token embedding table
-    float* token_embedding_table;    // (vocab_size, dim)
-    // weights for rmsnorms
-    float* rms_att_weight; // (layer, dim) rmsnorm weights
-    float* rms_ffn_weight; // (layer, dim)
-    // weights for matmuls. note dim == n_heads * head_size
-    float* wq; // (layer, dim, n_heads * head_size)
-    float* wk; // (layer, dim, n_kv_heads * head_size)
-    float* wv; // (layer, dim, n_kv_heads * head_size)
-    float* wo; // (layer, n_heads * head_size, dim)
-    // weights for ffn
-    float* w1; // (layer, hidden_dim, dim)
-    float* w2; // (layer, dim, hidden_dim)
-    float* w3; // (layer, hidden_dim, dim)
-    // final rmsnorm
-    float* rms_final_weight; // (dim,)
-    // (optional) classifier weights for the logits, on the last layer
+    // Tabela de embedding de tokens
+    float* token_embedding_table;
+    // Pesos para RMSNorm
+    float* rms_att_weight;
+    float* rms_ffn_weight;
+    // Pesos para multiplicações de matriz (MatMuls)
+    float* wq;
+    float* wk;
+    float* wv;
+    float* wo;
+    // Pesos para as camadas Feed-Forward Network (FFN)
+    float* w1;
+    float* w2;
+    float* w3;
+    // Peso para o RMSNorm final
+    float* rms_final_weight;
+    // Pesos do classificador (logits)
     float* wcls;
 } TransformerWeights;
 
-
-/*
-Nessa struct são definidos os buffers de trabalho para cálculos.
-Os dados do tipo float* por padrão (que não eram REUPtr antes) já são
-ponteiros para a RAM principal.
-No C64 a RAM era de 64kb, no psp a RAM será a principal de 32MB/64MB.
-Os campos que eram REUPtr, viram float*. No C64 eles foram movidos
-pro REU pra econimizar a RAM principal. No PSP há RAM de sobra, de certa forma.
-*/
 typedef struct {
-    // current wave of activations
-    float *x; // activation at current time stamp (dim,)
-    float *xb; // same, but inside a residual branch (dim,)
-    float *xb2; // an additional buffer just for convenience (dim,)
-    float *hb; // buffer for hidden dimension in the ffn (hidden_dim,)
-    float *hb2; // buffer for hidden dimension in the ffn (hidden_dim,)
-    float *fcir; // buffer for sin/cos used in rope (dim/n_heads,)
-    float* q; // query (dim,) in REU for single matmul function
-    float* k; // key (dim,) points into key_cache
-    float* v; // value (dim,) points into value_cache
-//    float *att; // buffer for scores/attention values (n_heads, seq_len)
-    float* att; // buffer for scores/attention values (n_heads, seq_len)
-    float* logits; // output logits
-    // kv cache
-//    float* key_cache;   // (layer, seq_len, dim)
-//    float* value_cache; // (layer, seq_len, dim)
-    float* key_cache;   // (layer, seq_len, dim)
-    float* value_cache; // (layer, seq_len, dim)
-    uint16_t current_layer;
+    // Buffers de ativação para os cálculos
+    float *x;
+    float *xb;
+    float *xb2;
+    float *hb;
+    float *hb2;
+    float *q;
+    float *k;
+    float *v;
+    float *att;
+    float *logits;
+    // Cache para Key/Value
+    float* key_cache;
+    float* value_cache;
 } RunState;
 
 typedef struct {
-    Config* config; // the hyperparameters of the architecture (the blueprint)
-    TransformerWeights weights; // the weights of the model
-    RunState state; // buffers for the "wave" of activations in the forward pass
-    // some more state needed to properly clean up the memory mapping (sigh)
-//    int fd; // file descriptor for memory mapping
-//    float* data; // memory mapped data pointer
-//    ssize_t file_size; // size of the checkpoint file in bytes
+    Config config;              // Hiperparâmetros da arquitetura
+    TransformerWeights weights; // Pesos do modelo
+    RunState state;             // Buffers de estado para os cálculos
+    int fd;                     // Descritor de arquivo para o checkpoint
+    float* data;                // Ponteiro para os dados do modelo carregados na RAM
+    ssize_t file_size;          // Tamanho do arquivo do checkpoint
 } Transformer;
 
 
-void build_transformer(Transformer *t, char* checkpoint_path);
-void free_transformer(Transformer* t);
-bool load_transformer(Transformer* t);
+// =============================================================================
+// API Pública do Módulo Transformer
+// =============================================================================
+// O bloco a seguir é a correção crucial para os erros de linker.
+// Ele garante que, quando este header for incluído por um arquivo C++,
+// as funções abaixo serão tratadas com "linkagem C", evitando que o
+// compilador C++ altere seus nomes (name mangling).
 
-// void REU_getf(REUPtr ptr, volatile float* out, uint16_t size);
-// void REU_putf(REUPtr ptr, volatile float* in, uint16_t size);
-
+#ifdef __cplusplus
+extern "C" {
 #endif
+
+// Declaração de variáveis globais (se houver)
+extern char* g_weights_memory_block;
+
+// Declarações (protótipos) das funções públicas
+
+/**
+ * Carrega a configuração e os pesos do modelo de um arquivo para a memória
+ * e aloca os buffers de estado necessários.
+ *
+ * @param t Ponteiro para a struct Transformer a ser preenchida.
+ * @param checkpoint_path Caminho para o arquivo .bin do modelo. Note o uso de 'const'
+ * para corrigir o warning do compilador.
+ */
+void build_transformer(Transformer *t, char *checkpoint_path);
+
+/**
+ * Libera toda a memória associada ao transformer.
+ */
+void free_transformer(Transformer* t);
+
+/**
+ * Libera a memória alocada para os buffers de estado (RunState).
+ */
+void free_run_state(RunState* s);
+
+
+#ifdef __cplusplus
+}
+#endif // Fim do bloco extern "C"
+
+#endif // FIM DO HEADER TRANSFORMER_H

@@ -22,4 +22,5 @@ int SetupCallbacks(void)
 		sceKernelStartThread(thid, 0, 0);
 	return thid;
 }
-// ------
+
+void delay(int ms) { sceKernelDelayThread(ms * 1000); }

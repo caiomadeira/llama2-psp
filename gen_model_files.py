@@ -21,6 +21,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     config = Config()
+<<<<<<< HEAD
     config.read_checkpoint(args.checkpoint, "src/config.bin")
 
     tokenizer = Tokenizer()
@@ -30,6 +31,17 @@ if __name__ == "__main__":
 
     weights = Weights()
     weights.read_weights(args.checkpoint, "src/weights.psp")
+=======
+    config.read_checkpoint(args.checkpoint, "config.bin")
+
+    tokenizer = Tokenizer()
+    tokenizer.build_tokenizer(args.tokenizer, config.vocab_size)
+    tokenizer.save_tokenizer("tokenizer.bin")
+    tokenizer.free_tokenizer()
+
+    weights = Weights()
+    weights.read_weights(args.checkpoint, "weights.psp")
+>>>>>>> test
 
     print(f"Tokenizer saved to tokenizer.bin")
     print(f"Config saved to config.bin")

@@ -1,44 +1,35 @@
 # Llama2 PSP
-Inference Llama 2 in C on Playstation Portable (PSP) BY Caio Madeira.  
-Based on inference of ytmytm to [Llama 2 for c64](https://github.com/ytmytm/llama2.c64).
+Inference Llama 2 in C on Playstation Portable (PSP) BY Caio Madeira.
+Based on the inference work by ytmytm for [Llama 2 for c64](https://github.com/ytmytm/llama2.c64).
 
 ![Running on PPSSPP](assets/1.png)
 
 ## CHANGELOG
 09/08/25 - Successfully executed on physical PSP hardware, but with some crash problems.
-03/08/25 - Funcionando apenas no PPSSPP. Using [Tiny Stories 260k model](https://huggingface.co/karpathy/tinyllamas/tree/main/stories260K). 
+03/08/25 - Now working only on PPSSPP. Using [Tiny Stories 260k model](https://huggingface.co/karpathy/tinyllamas/tree/main/stories260K).
+---
+## Porting Functions
+The core of the adaptation is to map the REU hardware access to pointer access in the PSP's main RAM.
 
-## Portando funções
-O ponto central da adaptação é: atribuir o acesso ao hardware da REU por acesso aos ponteiros da RAM principal do PSP.
+### Tokenizer.cpp vs tokenizer64.c
+#### PSP's MIPS Architecture vs. x86 for PCs
+The PSP's MIPS CPU is little-endian. The original C64 code that writes binary data (short and float) also writes in little-endian format (the least significant byte first).
 
-### Tokenizer.cpp x tokenizer64.c
-#### Arquitetura MIPS do PSP X x86 p/ PCs
-A CPU MIPS do PSP é litte-endian. O código original do c64
-que escreve os dados binários (short e float) também escreve
-no formato little-endian (o byte menos significativo primeiro).
+### Transformer.cpp vs transformer64.c
+The `TransformerWeights64` struct uses `typedef uint32_t REUPtr`.
+An `REUPtr` is an absolute 32-bit address in the Commodore 64's REU memory.
 
-### Transformer.cpp x transformer64.c
-A struct TransformerWeights64 usa typedef uint32_t REUPtr.
-Um REUPtr é um endereço absoluto de 32 bits na memória REU do
-commodore 64.   
+In the PSP's context, I load the entire `weights.psp` file into a single memory block allocated with `malloc`. Therefore, all fields of the `REUPtr` type will not be absolute addresses in external memory, but rather `float` pointers that point to different locations within this large memory block.
 
-No contexto do PSP, carrego o weights.psp inteiro em um único
-bloco de memória alocado com malloc. Logo, todos os campos
-do tipo REUPtr não serão endereços absolutos na memória
-externa e sim ponteiros float que apontam pra diferentes
-locais dentro desse grande bloco de memória.
+I can either keep the `REUPtr` type but change its meaning to be an offset from the beginning of my weights memory block, or just change everything to `float*`.
 
-Posso manter o tipo REUPtr mas mudando o seu significado pra ser um offset a partir do inicio do meu bloco de memoria de pesos ou apenas mudar tudo pro float*.
+### nnet.cpp vs nnet64.c
+This file is the "brain" of the inference. It contains the implementations of the Transformer algorithms, such as matrix multiplication, normalization, and attention. Most of the heavy computational work occurs here.
+In my case, I removed the `REU_getf` and `REU_putf` calls and replaced them with direct memory access on the PSP.
 
-### nnet.cpp x nnet64.c
-Esse arquivo é "cérebro" da inferência. Ele contém as implementações dos algoritmos do Transformer, como a multiplicação de matrizes, normalização e a attention. A maior parte do trabalho computacional pesado ocorre aqui.
-No meu caso, removi as chamadas de REU_getf e REU_putf e substitui pelo acesso
-direto a memória do PSP.
+### math.c (from the c64 version)
+We don't need it. We will use `<math.h>`.
 
-### math.c (da versão c64)
-Não precisamos. Usaremos o <math.h>.
-
-### generate.cpp x generatec64.c
-O generate é o loop principal que produz o texto, token por token.
-É um orquestrador do processo de geração de texto junto com o sampler64.c (ou sampler.cpp).
-
+### generate.cpp vs generatec64.c
+`generate` is the main loop that produces the text, token by token.
+It orchestrates the text generation process along with `sampler64.c` (or `sampler.cpp`).

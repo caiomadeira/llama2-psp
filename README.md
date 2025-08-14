@@ -5,7 +5,7 @@ Based on inference of ytmytm to [Llama 2 for c64](https://github.com/ytmytm/llam
 ![Running on PPSSPP](assets/1.png)
 
 ## CHANGELOG
-
+09/08/25 - Successfully executed on physical PSP hardware, but with some crash problems.
 03/08/25 - Funcionando apenas no PPSSPP. Using [Tiny Stories 260k model](https://huggingface.co/karpathy/tinyllamas/tree/main/stories260K). 
 
 ## Portando funções

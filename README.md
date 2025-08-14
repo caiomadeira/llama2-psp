@@ -4,10 +4,11 @@ Based on the inference work by ytmytm for [Llama 2 for c64](https://github.com/y
 
 ![Running on PPSSPP](assets/1.png)
 
-## CHANGELOG
-09/08/25 - Successfully executed on physical PSP hardware, but with some crash problems.  
+## CHANGELOG  
+03/08/25 - Now working only on PPSSPP. Using [Tiny Stories 260k model](https://huggingface.co/karpathy/tinyllamas/tree/main/stories260K).  
 
-03/08/25 - Now working only on PPSSPP. Using [Tiny Stories 260k model](https://huggingface.co/karpathy/tinyllamas/tree/main/stories260K).
+09/08/25 - Successfully executed on physical PSP hardware, but with some crash problems.   
+
 ---
 ## Porting Functions
 The core of the adaptation is to map the REU hardware access to pointer access in the PSP's main RAM.

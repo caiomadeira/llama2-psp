@@ -24,6 +24,10 @@ extern "C" {
     #include <unistd.h>
 }
 #include <cstdlib> // rand e srand sao daui
+#include "raylib.h"
+
+
+#define APP_NAME "Llama 2 PSP"
 #define SCREEN_WIDTH 480
 #define SCREEN_HEIGHT 272
 #define BUF_WIDTH	(512)
@@ -50,9 +54,9 @@ extern volatile int done;
 // functions new name
 #define print pspDebugScreenPrintf
 
-int exit_callback(int arg1, int arg2, void *common);
-int CallbackThread(SceSize args, void *argp);
-int SetupCallbacks(void);
+// int exit_callback(int arg1, int arg2, void *common);
+// int CallbackThread(SceSize args, void *argp);
+// int SetupCallbacks(void);
 void delay(int ms);
 
 #endif

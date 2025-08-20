@@ -2,6 +2,8 @@
 Inference Llama 2 in C on Playstation Portable (PSP) BY Caio Madeira.
 Based on the inference work by ytmytm for [Llama 2 for c64](https://github.com/ytmytm/llama2.c64).
 
+[Reposted by Yann LecCun](https://www.facebook.com/yann.lecun/posts/llama-2-has-been-ported-to-the-psp-in-addition-to-the-raspberry-pi-486-pc-commod/10161114909482143/)
+
 ![Running on PPSSPP](assets/1.png)
 
 ## CHANGELOG  

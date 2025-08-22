@@ -4,7 +4,13 @@ Based on the inference work by ytmytm for [Llama 2 for c64](https://github.com/y
 
 [Reposted by Yann LecCun](https://www.facebook.com/yann.lecun/posts/llama-2-has-been-ported-to-the-psp-in-addition-to-the-raspberry-pi-486-pc-commod/10161114909482143/)
 
-![Running on PPSSPP](assets/1.png)
+## Running on Physical device
+![Running on physical device](assets/2.jpeg)
+
+## Running on PPSSPP
+![Running on PPSSPP 1](assets/4.png)
+![Running on PPSSPP 2](assets/1.png)
+![Running on physical device](assets/3.gif)
 
 ## CHANGELOG  
 03/08/25 - Now working only on PPSSPP. Using [Tiny Stories 260k model](https://huggingface.co/karpathy/tinyllamas/tree/main/stories260K).  

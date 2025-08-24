@@ -28,16 +28,8 @@ extern "C" {
 #define SCREEN_HEIGHT 272
 #define BUF_WIDTH	(512)
 
-// #define TOKENIZER_BIN_PATH "tokenizer.bin"
-// #define WEIGHTS_PSP_PATH "weights.psp"
-// #define CONFIG_BIN_PATH "config.bin"
-
 #define TOKENIZER_BIN_PATH "tok512.bin"
 #define MODEL_PATH "stories260K.bin"
-
-// #define TOKENIZER_BIN_PATH "../scripts/input/tok512.bin"
-// #define MODEL_PATH "../scripts/input/stories260k.bin"
-//#define CONFIG_BIN_PATH "config.bin"
 
 // #define TOKENIZER_BIN_PATH "ms0:/PSP/GAME/llama2psp/tokenizer.bin"
 // #define WEIGHTS_PSP_PATH "ms0:/PSP/GAME/llama2psp/weights.psp"
@@ -47,8 +39,13 @@ extern "C" {
 //volatile int done = 0;
 extern volatile int done;
 
+#define PARAMS_OPTIONS_COUNT 3
+const u32 COLOR_WHITE = 0xFFFFFFFF;
+const u32 COLOR_YELLOW = 0XFF00FFFF;
+
 // functions new name
 #define print pspDebugScreenPrintf
+#define setTextColor pspDebugScreenSetTextColor
 
 int exit_callback(int arg1, int arg2, void *common);
 int CallbackThread(SceSize args, void *argp);

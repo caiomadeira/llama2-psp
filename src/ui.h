@@ -5,6 +5,7 @@
 
 typedef enum GameScreen {
     MENU = 0,
+    PROMPT,
     CHAT,
     EXIT
 } GameScreen;

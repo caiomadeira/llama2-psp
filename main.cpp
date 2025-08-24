@@ -120,7 +120,7 @@ bool HandleTextInput(char* buffer, int buffer_size, const char* title) {
         pspDebugScreenPrintf("\n");
     }
     
-    pspDebugScreenPrintf("\n\n[X] Digitar | [O] Apagar | [START] Confirmar\n");
+    pspDebugScreenPrintf("\n\n[X] Write | [O] Backspace | [START] Confirm\n");
 
     return false; // return false if not finish eddting yet
 }
@@ -272,7 +272,7 @@ int main(int argc, char* argv[])
         if (current_screen != KEYBOARD) {
                 pspDebugScreenClear();
                 pspDebugScreenSetXY(0, 1);
-                print("Llama 2 PSP\n");
+                print("Llama 2 PSP - By Caio Madeira\n");
                 print("Free memory: %d KB | Clock: %d/%d MHz\n", metrics.free_memory_kb, metrics.cpu_clock_freq, metrics.bus_clock_freq);
                 print("-------------------------------------\n");
                 switch(current_screen) {
@@ -307,7 +307,7 @@ int main(int argc, char* argv[])
                 case OUTPUT:
                     if (generated_text != NULL) {
                         print("Prompt: %s\n\n", prompt_text);
-                        print("Generated text:>>>>%s<<<\n\n", generated_text);
+                        print("Generated text: %s\n\n", generated_text);
                     } else { print("Error: generated text is NUll.\n"); }
                     print("----------------------------------\n");
                     print("Time: %.2f sec | Tokens/s: %.2f\n\n", metrics.total_generation_time_s, metrics.tokens_per_second);

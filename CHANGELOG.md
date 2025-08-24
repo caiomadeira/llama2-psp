@@ -1,6 +1,9 @@
 # CHANGELOG
 
-### 24/06/25 - Solving some problems
+### 24/06/25 - Solving some problems and official release
+
+You can get the release in release page.
+
 
 In generate.cpp, the function generate, is trying to process and print all the tokens, which includes the input
 token prompts. Btw, the first token of a sequence is usually a beginning of sentence (BOS) control token. This token

@@ -36,7 +36,7 @@ steps: numero maximo de tokens a serem gerados
 #define KEYBOARD_ACTIVE true
 
 char* generated_text_draw = NULL;
-bool can_generated = false;      
+bool can_generated = false;
 
 bool is_btn_pressed(SceCtrlData pad, SceCtrlData old_pad, int button) {
     return (pad.Buttons & button) && !(old_pad.Buttons & button);
@@ -78,13 +78,14 @@ void launch_osk(char* description_text, unsigned short* initial_text, unsigned s
     sceUtilityOskInitStart(&osk_params);
 }
 
+// Coloque isso antes da sua função setup_llama
 void print_debug(const char* message) {
     pspDebugScreenPrintf("[%s] Memoria livre: %d KB\n", message, sceKernelMaxFreeMemSize() / 1024);
-    sceKernelDelayThread(100000);
+    sceKernelDelayThread(100000); // Pequena pausa para garantir que a mensagem seja impressa
 }
 
 void print_mem_info(const char* stage) {
-    pspDebugScreenSetXY(0, pspDebugScreenGetY() + 1);
+    pspDebugScreenSetXY(0, pspDebugScreenGetY() + 1); // Pula uma linha
     print("[%s] Memoria Livre: %d KB\n", stage, sceKernelMaxFreeMemSize() / 1024);
     sceKernelDelayThread(2000000);
 }
@@ -114,7 +115,9 @@ int main(int argc, char* argv[])
     if (seed == 0) {
         sceKernelLibcTime(&currentTime);
         rng_seed = (unsigned long long)currentTime;
-    } else { rng_seed = seed; }
+    } else {
+        rng_seed = seed;
+    }
     delay(10);
 
     build_transformer(&transformer, (char*)checkpoint_path);
@@ -148,7 +151,7 @@ int main(int argc, char* argv[])
                 case PSP_UTILITY_DIALOG_FINISHED: break;
                 case PSP_UTILITY_DIALOG_NONE:
                     if (osk_params.data != NULL) {
-                        if (osk_params.data->result == PSP_UTILITY_OSK_RESULT_CHANGED || osk_params.data->result == PSP_UTILITY_OSK_RESULT_UNCHANGED) {
+                        if (osk_params.data->result == PSP_UTILITY_OSK_RESULT_CHANGED) {
                             for (int i = 0; i < 256; i++) {
                                 prompt_text[i] = (char)osk_output_buffer[i];
                                 if (osk_output_buffer[i] == 0) break;
@@ -159,8 +162,7 @@ int main(int argc, char* argv[])
                         free(osk_params.data); // cleaning the allocated memory for keyboard data
                         osk_params.data = NULL;
                     }
-                    is_ok_active = false;
-                    break;
+                    is_ok_active = false; break;
                 default: break;
             }
         } else {
@@ -175,7 +177,7 @@ int main(int argc, char* argv[])
 
                     if (is_btn_pressed(pad, old_pad, PSP_CTRL_TRIANGLE) && !can_generated) {
                         memset(osk_initial_text, 0, sizeof(osk_initial_text));
-                        memset(osk_initial_text, 0, sizeof(osk_initial_text));
+                        memset(osk_output_buffer, 0, sizeof(osk_output_buffer));
                         for(int i = 0; i < 256; ++i) {
                             osk_initial_text[i] = (unsigned short)prompt_text[i];
                             if (prompt_text[i] == '\0') break;
@@ -238,17 +240,16 @@ int main(int argc, char* argv[])
                         DrawTextEx(menu_font, status_message, (Vector2){ 10, 120 }, 10, 1.0f, RAYWHITE);
                     }
                     else if (generated_text_draw != NULL) {
-                        // float pos_x = 10;
-                        // float pos_y = 10;
-                        // int font_size = 18;
+                        float pos_x = 10;
+                        float pos_y = 10;
+                        int font_size = 10;
                         /* f(text, font_size) -> pixel width */
-                        int output_max_width = SCREEN_WIDTH - (pos_x + pos_y); 
+                        // int output_max_width = SCREEN_WIDTH - (pos_x + pos_y); 
                         //char* wrapped_generated_text = wrap_text(menu_font, generated_text_draw, font_size, 1.0f, output_max_width);
                         if (generated_text_draw != NULL) {
                             DrawText(generated_text_draw, pos_x, pos_y, font_size, RAYWHITE);
                             //DrawTextEx(menu_font, wrapped_generated_text, (Vector2){pos_x, pos_y}, font_size, 1.0f, RAYWHITE);
                             //free(wrapped_generated_text);
-                            free(generated_text_draw)
                             DrawTextEx(menu_font, "Pressione O para voltar", (Vector2){ 120, 250 }, 20, 2.0f, YELLOW);
                         }
                     } else {

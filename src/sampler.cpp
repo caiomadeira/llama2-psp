@@ -34,56 +34,6 @@ int sample_mult(float *probabilities, int n, float coin)
 	return n - 1; // in case of rounding errors
 }
 
-
-// // not great, not terrible
-// void bubblesort(ProbIndex* arr, uint16_t n) {
-//     ProbIndex tmp;
-//     for (uint16_t i = 0; i < n - 1; i++) {
-//         for (uint16_t j = 0; j < n - i - 1; j++) {
-//             if (arr[j].prob < arr[j + 1].prob) {
-//                 // swap elements
-//                 tmp.index = arr[i].index;
-//                 tmp.prob  = arr[i].prob;
-// 		arr[i].index = arr[j].index;
-// 		arr[i].prob  = arr[j].prob;
-// 		arr[j].index = tmp.index;
-// 		arr[j].prob  = tmp.prob;
-//             }
-//         }
-//     }
-// }
-
-// // quicksort fails due to stack overflow
-// void quicksort(ProbIndex* arr, uint16_t left, uint16_t right) {
-//     uint16_t i = left, j = right;
-//     ProbIndex tmp;
-//     ProbIndex pivot = arr[(left + right) / 2];
-
-//     // partition
-//     while (i <= j) {
-//         while (arr[i].prob > pivot.prob)
-//             i++;
-//         while (arr[j].prob < pivot.prob)
-//             j--;
-//         if (i <= j) {
-// 	    tmp.index = arr[i].index;
-// 	    tmp.prob  = arr[i].prob;
-// 	    arr[i].index = arr[j].index;
-// 	    arr[i].prob  = arr[j].prob;
-// 	    arr[j].index = tmp.index;
-// 	    arr[j].prob  = tmp.prob;
-//             i++;
-//             j--;
-//         }
-//     };
-
-//     // recursion
-//     if (left < j)
-//         quicksort(arr, left, j);
-//     if (i < right)
-//         quicksort(arr, i, right);
-// }
-
 int compare(const void *a, const void *b)
 {
 	ProbIndex *a_ = (ProbIndex *)a;
@@ -172,30 +122,6 @@ float random_f32(unsigned long long *state) {
     // random float32 in [0,1)
 	return (random_u32(state) >> 8) / 16777216.0f;
 }
-// // same softmax as in nnet64.c, but with local buffer
-// void softmax_local(float* x, uint16_t size) {
-//         // find max value (for numerical stability)
-//         float max_val = x[0];
-//         for (uint16_t i = 1; i < size; i++) {
-//             if (x[i] > max_val) {
-//                 max_val = x[i];
-//             }
-//         }
-//         // exp and sum
-//         float sum = 0.0;
-//         for (uint16_t i = 0; i < size; i++) {
-//             #ifdef TEST
-//             x[i] = exp(x[i] - max_val);
-//             #else
-//             x[i] = expf(x[i] - max_val);
-//             #endif
-//             sum += x[i];
-//         }
-//         // normalize
-//         for (uint16_t i = 0; i < size; i++) {
-//             x[i] /= sum;
-//         }
-// }
 
 int sample(Sampler *sampler, float *logits)
 {

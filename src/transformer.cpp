@@ -183,69 +183,6 @@ void build_transformer(Transformer *t, char *checkpoint_path)
 	malloc_run_state(&t->state, &t->config); // faz a alocação dos runstate buffers
 }
 
-// void load_transformer(Transformer* t)
-// {
-//     // ----- 1. CARREGAR config.bin -----
-//     FILE* config_file = fopen(CONFIG_BIN_PATH, "rb");
-//     if (config_file == NULL) {
-//         pspDebugScreenPrintf("ERRO FATAL: Nao foi possivel abrir config.bin!\n");
-//         while(1); // Trava o programa para vermos o erro
-//     }
-
-//     // Alocar memória para a struct de configuração
-//     t->config = (Config*)malloc(sizeof(Config));
-//     if (t->config == NULL) {
-//         pspDebugScreenPrintf("ERRO FATAL: malloc falhou para t->config!\n");
-//         fclose(config_file);
-//         while(1);
-//     }
-
-//     // Ler o arquivo diretamente para dentro da struct
-//     fread(t->config, sizeof(Config), 1, config_file);
-//     fclose(config_file);
-    
-//     // Verificação opcional, mas recomendada, para ver se os valores estão corretos
-//     // (Lembre-se de corrigir o script Python para evitar problemas de padding)
-//     pspDebugScreenPrintf("Config carregada: dim=%d, layers=%d, vocab=%d\n", 
-//                          t->config->dimension, t->config->number_of_layers, t->config->vocab_size);
-//     sceKernelDelayThread(1000000);
-
-//     FILE* file = fopen(WEIGHTS_PSP_PATH, "rb");
-//     if (file == NULL) {
-//         printf("Error: can't open weights.psp\n");
-//         return;
-//     }
-
-//     // --- calcular o tamanho do arquivo ---
-//     fseek(file, 0, SEEK_END);
-//     long file_size = ftell(file);
-//     fseek(file, 0, SEEK_SET);
-//     // --- fim do calculo do tamanho do arquivo ---
-
-//     g_weights_memory_block = (char*)malloc(file_size);
-//     if (g_weights_memory_block == NULL) {
-//         printf("Error: Can't allocate memory for weights.\n");
-//         fclose(file);
-//         return;
-//     }
-//     fread(g_weights_memory_block, 1, file_size, file);
-//     fclose(file);
-//     sceKernelDcacheWritebackInvalidateAll(); 
-
-//     // verificando a assinatura posta antes
-//     uint32_t magic = *(uint32_t*)g_weights_memory_block;
-//     if (magic != SIGNATURE) {
-//         printf("Error: SIGNATURE INVALID in weights.psp\n");
-//         return;
-//     }
-
-//     // mapeando os weigths com memory_map_weights. O ponteiro começa depois da signature de 4 bytes.
-//     char* weights_ptr = g_weights_memory_block + sizeof(uint32_t);
-//     memory_map_weights(t, weights_ptr);
-
-//     malloc_run_state(t); //alocando os buffers de estado (trabalho) de RunState
-// }
-
 void free_run_state(RunState *s)
 {
 	free(s->x);

@@ -1,7 +1,12 @@
 # Llama-2 PSP
-Inference Llama-2 in C on Playstation Portable (PSP) y Caio Madeira.
+Inference Llama-2 in C on Playstation Portable (PSP) by Caio Madeira.
 Based on the inference work by ytmytm for [Llama 2 for c64](https://github.com/ytmytm/llama2.c64), which is
 based in a port of [llama2.c](https://github.com/karpathy/llama2.c).
+Thanks to [hackday for posting](https://hackaday.com/2025/08/17/llama-habitat-continues-to-expand-now-includes-the-psp/)  
+
+
+[Reposted by Yann LeCun](https://www.facebook.com/yann.lecun/posts/llama-2-has-been-ported-to-the-psp-in-addition-to-the-raspberry-pi-486-pc-commod/10161114909482143/)
+
 
 ![Running on physical device](assets/2.jpeg)
 
@@ -18,9 +23,7 @@ based in a port of [llama2.c](https://github.com/karpathy/llama2.c).
 ## Supported models
 | Model | Params | Series | Link | 
 |----------|:----------:|----------:| ----------:|
-| TinyStories | 260K | Tiny Llamas |[ model](https://huggingface.co/karpathy/tinyllamas/tree/main/stories260K)| 
-
-[Reposted by Yann LeCun](https://www.facebook.com/yann.lecun/posts/llama-2-has-been-ported-to-the-psp-in-addition-to-the-raspberry-pi-486-pc-commod/10161114909482143/)
+| TinyStories | 260K | Tiny Llamas |[ model](https://huggingface.co/karpathy/tinyllamas/tree/main/stories260K)
 
 ## Screenshots
 

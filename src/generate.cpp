@@ -69,7 +69,7 @@ char* generate(Transformer *transformer, Tokenizer *tokenizer, Sampler *sampler,
     while(pos < steps) {
         pspDebugScreenSetXY(0, 0);
         pspDebugScreenClear();
-        print("Gerando token %d de %d...", pos + 1, steps);        
+        print("Generating tokens %d of %d...\n", pos + 1, steps);        
         // encaminha o transformer pra obter logits pro proximo token
         float* logits = forward(transformer, token, pos);
 

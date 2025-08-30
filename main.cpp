@@ -10,20 +10,14 @@ PSP port by Caio Madeira
 #include "src/sampler.h"
 #include "src/transformer.h"
 
+#define CONFIG 0 // 0, 1, 2
+
 extern "C" {
     PSP_MODULE_INFO("Llama2PSP", 0, 1, 0);
     PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
 }
 
 volatile int done = 0;
-
-typedef enum Screen {
-    PROMPT = 0,
-    GENERATING,
-    PARAMS,
-    OUTPUT,
-    KEYBOARD,
-} Screen;
 
 typedef struct AppMetrics {
     float total_generation_time_s;
@@ -104,9 +98,9 @@ bool HandleTextInput(char* buffer, int buffer_size, const char* title) {
 
     pspDebugScreenClear();
     pspDebugScreenSetXY(0, 1);
-    pspDebugScreenPrintf("%s\n\n", title);
+    print("%s\n\n", title);
     
-    pspDebugScreenPrintf(" > %s_\n\n", buffer);
+    print(" > %s_\n\n", buffer);
 
     // drawing keyoard layout (maube move)
     for (int y = 0; y < num_rows; y++) {
@@ -120,7 +114,7 @@ bool HandleTextInput(char* buffer, int buffer_size, const char* title) {
         pspDebugScreenPrintf("\n");
     }
     
-    pspDebugScreenPrintf("\n\n[X] Write | [O] Backspace | [START] Confirm\n");
+    print("\n\n[X] Write | [O] Backspace | [START] Confirm\n");
 
     return false; // return false if not finish eddting yet
 }
@@ -138,9 +132,28 @@ int main(int argc, char* argv[])
 
     char *checkpoint_path = MODEL_PATH;
     char *tokenizer_path = TOKENIZER_BIN_PATH;
+    // STATE VARS AND BUFFERS
+    char prompt_text[100] = "Lily likes cats and dogs. She asked her mom for a dog and her mom said no, so instead she asked";
     float temperature = 0.9f;
     float topp = 0.9f;
     int steps = 256;
+
+    if (CONFIG == 0) {
+        temperature = 0.9f;
+        topp = 0.9f;
+        steps = 256;
+
+    } else if (CONFIG == 1) {
+        temperature = 0.6f;
+        topp = 0.6f;
+        steps = 256;
+
+    } else if (CONFIG == 2) {
+        temperature = 0.2f;
+        topp = 0.2f;
+        steps = 256;
+    }
+
     int seed = 0;
     unsigned long long rng_seed = 0;
     char* generated_text = NULL;
@@ -168,15 +181,18 @@ int main(int argc, char* argv[])
     build_sampler(&sampler, transformer.config.vocab_size, temperature, topp, rng_seed);
     print("Sampler loaded.\n");
 
-    // STATE VARS AND BUFFERS
-    Screen current_screen = PROMPT;
-    char prompt_text[256] = "Once Upon a time";
-
-    int params_current_option = 0;
-
     sceCtrlSetSamplingCycle(0);
     sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
-
+    metrics.free_memory_kb = sceKernelMaxFreeMemSize() / 1024;
+    metrics.cpu_clock_freq = scePowerGetCpuClockFrequencyInt();
+    metrics.bus_clock_freq = scePowerGetBusClockFrequencyInt();
+    pspDebugScreenClear();
+    pspDebugScreenSetXY(0, 1);
+    print("Llama 2 PSP \n");
+    print("Free memory: %d KB | Clock: %d/%d MHz\n", metrics.free_memory_kb, metrics.cpu_clock_freq, metrics.bus_clock_freq);
+    print("-------------------------------------\n");
+    print("Default prompt: %s\n", prompt_text);
+    print("[X] generate text.\n\n");            
 	while(!done) {
         old_pad = pad;
         sceCtrlReadBufferPositive(&pad, 1);
@@ -185,135 +201,42 @@ int main(int argc, char* argv[])
         metrics.bus_clock_freq = scePowerGetBusClockFrequencyInt();
         /*
         ============================
-                UPDATE SECTION
+                USER SECTION
         ============================
         */
-        switch(current_screen) {
-            case PROMPT:
-            {
-                if (is_btn_pressed(pad, old_pad, PSP_CTRL_TRIANGLE)) { current_screen = KEYBOARD; }
-                if (is_btn_pressed(pad, old_pad, PSP_CTRL_CROSS)) { current_screen = GENERATING; }
-                if (is_btn_pressed(pad, old_pad, PSP_CTRL_CIRCLE)) { current_screen = PARAMS; }
-            } break;
-            case PARAMS: 
-            {
-                if (is_btn_pressed(pad, old_pad, PSP_CTRL_DOWN)) {
-                    params_current_option++;
-                    if (params_current_option >= PARAMS_OPTIONS_COUNT) { params_current_option = 0; }
-                }
 
-                if (is_btn_pressed(pad, old_pad, PSP_CTRL_UP)) {
-                    params_current_option--;
-                    if (params_current_option < 0) { params_current_option = PARAMS_OPTIONS_COUNT - 1;}
-                }
+        if (is_btn_pressed(pad, old_pad, PSP_CTRL_CROSS)) { 
+            // print("-------------------------------------\n");
+            if (generated_text != NULL) free(generated_text);
+            // need to recriate sampler with the new params in case of editing
+            build_sampler(&sampler, transformer.config.vocab_size, temperature, topp, rng_seed);
+            u64 start_ticks;
+            sceRtcGetCurrentTick(&start_ticks);
+            
+            generated_text = generate(&transformer, &tokenizer, &sampler, prompt_text, steps, &metrics.generated_token_count);
+            u64 end_ticks;
+            sceRtcGetCurrentTick(&end_ticks);
 
-                if (is_btn_pressed(pad, old_pad, PSP_CTRL_RIGHT)) {
-                    if (params_current_option == 0) temperature += 0.1f;
-                    if (params_current_option == 1) topp += 0.1f;
-                    if (params_current_option == 2) steps += 8;
-                }
-                if (is_btn_pressed(pad, old_pad, PSP_CTRL_LEFT)) { 
-                    if (params_current_option == 0) temperature -= 0.1f;
-                    if (params_current_option == 1) topp -= 0.1f;
-                    if (params_current_option == 2) steps -= 8;
-                }
+            u64 tick_diff = end_ticks - start_ticks;
+            long tick_resolution = sceRtcGetTickResolution(); 
+            metrics.total_generation_time_s = (double)tick_diff / (double)tick_resolution;
 
-                if (temperature > 1.0f) temperature = 1.0f;
-                if (temperature < 0.0f) temperature = 0.0f;
-                if (topp > 1.0f) topp = 1.0f;
-                if (topp < 0.0f) topp = 0.0f;
-                if (steps > 256) steps = 256;
-                if (steps < 8) steps = 8;
+            if (metrics.total_generation_time_s > 0)
+                metrics.tokens_per_second = (float)metrics.generated_token_count / metrics.total_generation_time_s;
+            else
+                metrics.tokens_per_second = 0.0f;
 
-                if (is_btn_pressed(pad, old_pad, PSP_CTRL_CIRCLE)) {
-                    current_screen = PROMPT;
-                }
-            } break;
-            case KEYBOARD:
-            {
-                bool finish_edit = HandleTextInput(prompt_text, 256, "Type your prompt:");
-                if (finish_edit) { current_screen = PROMPT; }
-            } break;
-            case GENERATING:
-            {
-                if (generated_text != NULL) free(generated_text);
-                // need to recriate sampler with the new params in case of editing
-                build_sampler(&sampler, transformer.config.vocab_size, temperature, topp, rng_seed);
-                u64 start_ticks;
-                sceRtcGetCurrentTick(&start_ticks);
-                
-                generated_text = generate(&transformer, &tokenizer, &sampler, prompt_text, steps, &metrics.generated_token_count);
-                u64 end_ticks;
-                sceRtcGetCurrentTick(&end_ticks);
-
-                u64 tick_diff = end_ticks - start_ticks;
-                long tick_resolution = sceRtcGetTickResolution(); 
-                metrics.total_generation_time_s = (double)tick_diff / (double)tick_resolution;
-
-                if (metrics.total_generation_time_s > 0) {
-                    metrics.tokens_per_second = (float)metrics.generated_token_count / metrics.total_generation_time_s;
-                } else {
-                    metrics.tokens_per_second = 0.0f;
-                }
-                    
-                current_screen = OUTPUT;
-            } break;
-
-            case OUTPUT:
-            {
-                if (is_btn_pressed(pad, old_pad, PSP_CTRL_CIRCLE)) { current_screen = PROMPT; };
-            } break;
-        }
-        /*
-        ============================
-                DRAW SECTION
-        ============================
-        */
-        if (current_screen != KEYBOARD) {
-                pspDebugScreenClear();
-                pspDebugScreenSetXY(0, 1);
-                print("Llama 2 PSP - By Caio Madeira\n");
-                print("Free memory: %d KB | Clock: %d/%d MHz\n", metrics.free_memory_kb, metrics.cpu_clock_freq, metrics.bus_clock_freq);
-                print("-------------------------------------\n");
-                switch(current_screen) {
-                    case PROMPT:
-                    print("Default prompt: %s\n", prompt_text);
-                    print("[X] generate text.\n");            
-                    print("[TRIANGLE] edit prompt.\n");
-                    print("[O] config\n");
-                    print("[HOME] Quit\n");
-                    break;
-                case PARAMS:
-                    setTextColor(COLOR_WHITE);
-                    print("Config\n");
-                    print("-------------------------------------\n");
-                    print("You can use UP/DOWN to navigate through options and RIGHT/LEFT to change the value.\n\n");
-                    setTextColor((params_current_option == 0) ? COLOR_YELLOW : COLOR_WHITE);
-                    print("> Temperature: %.2f\n", temperature);
-
-                    setTextColor((params_current_option == 1) ? COLOR_YELLOW : COLOR_WHITE);
-                    print("Topp: %.2f\n", topp);
-                    
-                    setTextColor((params_current_option == 2) ? COLOR_YELLOW : COLOR_WHITE);                    
-                    print("Steps: %d\n", steps);
-
-                    setTextColor(COLOR_WHITE);
-                    print("[O] Back to menu.\n");
-                    break;
-                case GENERATING:
-                    print("Generating text...\n\n");
-                    print("Prompt: %s\n", prompt_text);
-                    break;
-                case OUTPUT:
-                    if (generated_text != NULL) {
-                        print("Prompt: %s\n\n", prompt_text);
-                        print("Generated text: %s\n\n", generated_text);
-                    } else { print("Error: generated text is NUll.\n"); }
-                    print("----------------------------------\n");
-                    print("Time: %.2f sec | Tokens/s: %.2f\n\n", metrics.total_generation_time_s, metrics.tokens_per_second);
-                    print("[O] back to menu\n");
-                    break;
-                }
+            if (generated_text != NULL) {
+                print("Prompt: %s\n\n", prompt_text);
+                print("Generated text: %s\n\n", generated_text);
+            } else { print("Error: generated text is NUll.\n"); }
+            print("----------------------------------\n");
+            print("Temperature: %.2f\n", temperature);
+            print("Top-p: %.2f\n", topp);
+            print("Steps: %d\n", steps);
+            print("----------------------------------\n");
+            print("Time: %.2f sec | Tokens/s: %.2f\n\n", metrics.total_generation_time_s, metrics.tokens_per_second);
+            print("Free memory: %d KB | Clock: %d/%d MHz\n", metrics.free_memory_kb, metrics.cpu_clock_freq, metrics.bus_clock_freq);
         }
         sceDisplayWaitVblankStart();
     }

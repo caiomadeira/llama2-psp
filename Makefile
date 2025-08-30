@@ -18,7 +18,7 @@ LDFLAGS =
 LIBS = -lpspgu -lpsppower
 
 EXTRA_TARGETS = EBOOT.PBP
-PSP_EBOOT_TITLE = Llama 2 PSP
+PSP_EBOOT_TITLE = Llama 2 PSP CONFIG 0
 
 PSP_EBOOT_ICON = assets/ICON0.png
 PSP_EBOOT_PIC1 = assets/PIC1.png

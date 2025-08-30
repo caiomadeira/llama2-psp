@@ -10,6 +10,8 @@ PSP port by Caio Madeira
 #include "src/sampler.h"
 #include "src/transformer.h"
 
+#define CONFIG 0 // 0, 1, 2
+
 extern "C" {
     PSP_MODULE_INFO("Llama2PSP", 0, 1, 0);
     PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
@@ -130,9 +132,28 @@ int main(int argc, char* argv[])
 
     char *checkpoint_path = MODEL_PATH;
     char *tokenizer_path = TOKENIZER_BIN_PATH;
+    // STATE VARS AND BUFFERS
+    char prompt_text[100] = "Lily likes cats and dogs. She asked her mom for a dog and her mom said no, so instead she asked";
     float temperature = 0.9f;
     float topp = 0.9f;
     int steps = 256;
+
+    if (CONFIG == 0) {
+        temperature = 0.9f;
+        topp = 0.9f;
+        steps = 256;
+
+    } else if (CONFIG == 1) {
+        temperature = 0.6f;
+        topp = 0.6f;
+        steps = 256;
+
+    } else if (CONFIG == 2) {
+        temperature = 0.2f;
+        topp = 0.2f;
+        steps = 256;
+    }
+
     int seed = 0;
     unsigned long long rng_seed = 0;
     char* generated_text = NULL;
@@ -160,18 +181,18 @@ int main(int argc, char* argv[])
     build_sampler(&sampler, transformer.config.vocab_size, temperature, topp, rng_seed);
     print("Sampler loaded.\n");
 
-    // STATE VARS AND BUFFERS
-    char prompt_text[256] = "Once Upon a time";
-
     sceCtrlSetSamplingCycle(0);
     sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
+    metrics.free_memory_kb = sceKernelMaxFreeMemSize() / 1024;
+    metrics.cpu_clock_freq = scePowerGetCpuClockFrequencyInt();
+    metrics.bus_clock_freq = scePowerGetBusClockFrequencyInt();
     pspDebugScreenClear();
     pspDebugScreenSetXY(0, 1);
-    print("Llama 2 PSP - By Caio Madeira (simple flow)\n");
+    print("Llama 2 PSP \n");
     print("Free memory: %d KB | Clock: %d/%d MHz\n", metrics.free_memory_kb, metrics.cpu_clock_freq, metrics.bus_clock_freq);
     print("-------------------------------------\n");
     print("Default prompt: %s\n", prompt_text);
-    print("[X] generate text.\n");            
+    print("[X] generate text.\n\n");            
 	while(!done) {
         old_pad = pad;
         sceCtrlReadBufferPositive(&pad, 1);
@@ -185,10 +206,6 @@ int main(int argc, char* argv[])
         */
 
         if (is_btn_pressed(pad, old_pad, PSP_CTRL_CROSS)) { 
-            // pspDebugScreenClear();
-            // pspDebugScreenSetXY(0, 1);
-            // print("Llama 2 PSP - By Caio Madeira\n");
-            // print("Free memory: %d KB | Clock: %d/%d MHz\n", metrics.free_memory_kb, metrics.cpu_clock_freq, metrics.bus_clock_freq);
             // print("-------------------------------------\n");
             if (generated_text != NULL) free(generated_text);
             // need to recriate sampler with the new params in case of editing
@@ -214,7 +231,12 @@ int main(int argc, char* argv[])
                 print("Generated text: %s\n\n", generated_text);
             } else { print("Error: generated text is NUll.\n"); }
             print("----------------------------------\n");
+            print("Temperature: %.2f\n", temperature);
+            print("Top-p: %.2f\n", topp);
+            print("Steps: %d\n", steps);
+            print("----------------------------------\n");
             print("Time: %.2f sec | Tokens/s: %.2f\n\n", metrics.total_generation_time_s, metrics.tokens_per_second);
+            print("Free memory: %d KB | Clock: %d/%d MHz\n", metrics.free_memory_kb, metrics.cpu_clock_freq, metrics.bus_clock_freq);
         }
         sceDisplayWaitVblankStart();
     }

@@ -45,6 +45,26 @@ Copy the __Llama2PSP__ folder to ```PSP/GAME```.
 For __.ISO__ just copy to ```ISO``` on PSP ROOT.  
 
 
+## Cite
+```
+@inproceedings{eramiars,
+ author = {Caio Madeira and Maurício Magnaguagno and Dalvan Griebler},
+ title = { Language Models are the new Doom},
+ booktitle = {Anais da I Escola Regional de Aprendizado de Máquina e Inteligência Artificial da Região Sul},
+ location = {Porto Alegre/RS},
+ year = {2025},
+ keywords = {},
+ issn = {0000-0000},
+ pages = {416--419},
+ publisher = {SBC},
+ address = {Porto Alegre, RS, Brasil},
+ doi = {10.5753/eramiars.2025.16777},
+ url = {https://sol.sbc.org.br/index.php/eramiars/article/view/39470}
+}
+
+
+`´
+
 ## About
 
 [Linkedln](https://www.linkedin.com/in/caio-madeira/)  

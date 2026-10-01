@@ -61,9 +61,7 @@ For __.ISO__ just copy to ```ISO``` on PSP ROOT.
  doi = {10.5753/eramiars.2025.16777},
  url = {https://sol.sbc.org.br/index.php/eramiars/article/view/39470}
 }
-
-
-`´
+```
 
 ## About
 
